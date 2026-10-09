@@ -1,0 +1,195 @@
+{
+  "description": "Retrieval evaluation for the Slotly demo knowledge base. 'expect' lists document slugs that must appear among the relevant (within RAG_MAX_DISTANCE) top-k results; 'forbid' lists slugs that must not appear; 'answerable: false' cases must produce no relevant results.",
+  "cases": [
+    {
+      "id": "direct-cancel-window",
+      "type": "direct",
+      "question": "How many hours before my appointment can I cancel for free?",
+      "expect": [
+        "cancellation-policy"
+      ],
+      "forbid": [
+        "cancellation-policy-2024"
+      ]
+    },
+    {
+      "id": "direct-hours",
+      "type": "direct",
+      "question": "What are your opening hours on Saturday?",
+      "expect": [
+        "opening-hours"
+      ]
+    },
+    {
+      "id": "direct-payment",
+      "type": "direct",
+      "question": "Which payment methods do you accept?",
+      "expect": [
+        "faq"
+      ]
+    },
+    {
+      "id": "direct-advance",
+      "type": "direct",
+      "question": "How far in advance can I book an appointment?",
+      "expect": [
+        "booking-rules"
+      ]
+    },
+    {
+      "id": "semantic-late-refund",
+      "type": "semantic",
+      "question": "If something comes up the evening before, will I still have to pay?",
+      "expect": [
+        "cancellation-policy"
+      ]
+    },
+    {
+      "id": "semantic-stress",
+      "type": "semantic",
+      "question": "I've been sleeping badly and feel anxious, what would help?",
+      "expect": [
+        "service-catalogue"
+      ]
+    },
+    {
+      "id": "semantic-move",
+      "type": "semantic",
+      "question": "Can I move my session to another day?",
+      "expect": [
+        "cancellation-policy",
+        "booking-rules"
+      ]
+    },
+    {
+      "id": "semantic-teen",
+      "type": "semantic",
+      "question": "My 16 year old son wants a sports massage, is that ok?",
+      "expect": [
+        "faq"
+      ]
+    },
+    {
+      "id": "conflict-old-policy",
+      "type": "conflicting",
+      "question": "Is the late cancellation fee the full price or half?",
+      "expect": [
+        "cancellation-policy"
+      ],
+      "forbid": [
+        "cancellation-policy-2024"
+      ]
+    },
+    {
+      "id": "unanswerable-dog",
+      "type": "unanswerable",
+      "question": "Do you offer dog grooming?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-airport",
+      "type": "unanswerable",
+      "question": "Where can I validate airport parking tickets?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-stock",
+      "type": "unanswerable",
+      "question": "What was the FTSE 100 closing price yesterday?",
+      "answerable": false
+    },
+    {
+      "id": "clarify-price",
+      "type": "clarification",
+      "question": "How much is a session?",
+      "expect": [
+        "service-catalogue"
+      ],
+      "note": "Several services match — the grounded prompt instructs the LLM to ask which service."
+    },
+    {
+      "id": "semantic-wheelchair",
+      "type": "semantic",
+      "question": "Is the studio wheelchair accessible?",
+      "expect": [
+        "opening-hours"
+      ]
+    },
+    {
+      "id": "semantic-cash",
+      "type": "semantic",
+      "question": "Can I pay with cash when I arrive?",
+      "expect": [
+        "faq"
+      ]
+    },
+    {
+      "id": "semantic-zoom",
+      "type": "semantic",
+      "question": "Can I do my career coaching over Zoom?",
+      "expect": [
+        "faq"
+      ]
+    },
+    {
+      "id": "semantic-noshow",
+      "type": "semantic",
+      "question": "What happens if I simply don't turn up?",
+      "expect": [
+        "cancellation-policy"
+      ]
+    },
+    {
+      "id": "semantic-prep",
+      "type": "semantic",
+      "question": "Do I need to prepare anything before the nutrition appointment?",
+      "expect": [
+        "service-catalogue"
+      ]
+    },
+    {
+      "id": "semantic-timezone",
+      "type": "semantic",
+      "question": "Which time zone are the appointment times shown in?",
+      "expect": [
+        "opening-hours"
+      ]
+    },
+    {
+      "id": "unanswerable-wifi",
+      "type": "unanswerable",
+      "question": "What is the wifi password at the studio?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-dog-bring",
+      "type": "unanswerable",
+      "question": "Can I bring my dog with me?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-supplements",
+      "type": "unanswerable",
+      "question": "Do you sell protein supplements?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-football",
+      "type": "unanswerable",
+      "question": "Who won the football match last night?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-tax",
+      "type": "unanswerable",
+      "question": "How do I file my self assessment tax return?",
+      "answerable": false
+    },
+    {
+      "id": "unanswerable-recipe",
+      "type": "unanswerable",
+      "question": "Give me a recipe for banana bread",
+      "answerable": false
+    }
+  ]
+}

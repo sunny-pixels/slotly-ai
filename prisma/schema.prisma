@@ -1,0 +1,207 @@
+// Slotly AI — relational schema (PostgreSQL / Neon + pgvector)
+//
+// The double-booking guard is a partial unique index declared below (Prisma
+// `partialIndexes` preview), so future migrations keep it. CHECK constraints,
+// the slot-overlap exclusion constraint and the HNSW vector index cannot be
+// expressed in Prisma and live in the hand-written migration
+// `*_integrity_constraints_and_vector_index`. `pnpm db:verify` and the
+// integration tests assert that all of them exist.
+
+generator client {
+  provider        = "prisma-client"
+  previewFeatures = ["partialIndexes", "postgresqlExtensions"]
+  output          = "../src/generated/prisma"
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector, btree_gist]
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BLOCKED
+}
+
+/// PENDING and CONFIRMED are "active" and occupy the slot (see the partial unique index).
+/// CANCELLED and COMPLETED release / no longer contend for it.
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum DocumentSourceType {
+  SEED
+  UPLOAD
+  TEXT
+}
+
+enum IngestionStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String
+  role      Role      @default(CUSTOMER)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  bookings  Booking[] @relation("CustomerBookings")
+  cancelled Booking[] @relation("CancelledBy")
+
+  @@map("users")
+}
+
+model Service {
+  id                String             @id @default(cuid())
+  name              String
+  slug              String             @unique
+  description       String
+  category          String
+  durationMinutes   Int                @map("duration_minutes")
+  priceCents        Int                @map("price_cents")
+  currency          String             @default("GBP") @db.Char(3)
+  isActive          Boolean            @default(true) @map("is_active")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  slots             Slot[]
+  availabilityRules AvailabilityRule[]
+
+  @@index([isActive, category])
+  @@map("services")
+}
+
+/// Weekly opening hours for a service, interpreted in `timezone`.
+model AvailabilityRule {
+  id                  String    @id @default(cuid())
+  serviceId           String    @map("service_id")
+  weekday             Int // 0 = Sunday … 6 = Saturday
+  openTime            String    @map("open_time") // "HH:mm"
+  closeTime           String    @map("close_time") // "HH:mm"
+  slotIntervalMinutes Int       @map("slot_interval_minutes")
+  timezone            String
+  effectiveFrom       DateTime? @map("effective_from") @db.Date
+  effectiveTo         DateTime? @map("effective_to") @db.Date
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  service             Service   @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([serviceId, weekday])
+  @@map("availability_rules")
+}
+
+/// An exclusive (capacity = 1) bookable interval for one service.
+model Slot {
+  id        String     @id @default(cuid())
+  serviceId String     @map("service_id")
+  startAt   DateTime   @map("start_at") @db.Timestamptz(3)
+  endAt     DateTime   @map("end_at") @db.Timestamptz(3)
+  status    SlotStatus @default(AVAILABLE)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  service   Service    @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  bookings  Booking[]
+
+  @@unique([serviceId, startAt])
+  @@index([startAt])
+  @@map("slots")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  publicReference String        @unique @map("public_reference")
+  slotId          String        @map("slot_id")
+  customerId      String        @map("customer_id")
+  status          BookingStatus @default(CONFIRMED)
+  /// Price snapshot taken from the service at booking time (authoritative for this booking).
+  priceCents      Int           @map("price_cents")
+  currency        String        @db.Char(3)
+  notes           String?
+  cancelledAt     DateTime?     @map("cancelled_at") @db.Timestamptz(3)
+  cancelledById   String?       @map("cancelled_by_id")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  slot            Slot          @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  customer        User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Restrict)
+  cancelledBy     User?         @relation("CancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+
+  /// DOUBLE-BOOKING GUARD: PostgreSQL allows at most one *active* booking per slot.
+  @@unique([slotId], map: "unique_active_booking_per_slot", where: raw("status IN ('PENDING', 'CONFIRMED')"))
+  @@index([customerId, status])
+  @@index([slotId])
+  @@index([status, createdAt])
+  @@map("bookings")
+}
+
+model KnowledgeDocument {
+  id             String             @id @default(cuid())
+  /// Stable identifier — re-ingesting the same slug replaces the previous version.
+  slug           String             @unique
+  title          String
+  category       String
+  sourceType     DocumentSourceType @map("source_type")
+  content        String
+  contentHash    String             @map("content_hash")
+  version        Int                @default(1)
+  status         IngestionStatus    @default(PENDING)
+  error          String?
+  chunkCount     Int                @default(0) @map("chunk_count")
+  /// Inactive (superseded / outdated) documents are never retrieved.
+  isActive       Boolean            @default(true) @map("is_active")
+  supersededBy   String?            @map("superseded_by")
+  effectiveDate  DateTime?          @map("effective_date") @db.Date
+  /// Provider/model that produced the stored vectors; vectors from different models are not comparable.
+  embeddingModel String?            @map("embedding_model")
+  ingestedAt     DateTime?          @map("ingested_at") @db.Timestamptz(3)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  chunks         KnowledgeChunk[]
+
+  @@index([isActive, status])
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id            String                      @id @default(cuid())
+  documentId    String                      @map("document_id")
+  chunkIndex    Int                         @map("chunk_index")
+  content       String
+  headingPath   String                      @default("") @map("heading_path")
+  tokenEstimate Int                         @map("token_estimate")
+  embedding     Unsupported("vector(384)")?
+  createdAt     DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  document      KnowledgeDocument           @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@map("knowledge_chunks")
+}
+
+/// Assistant observability. Deliberately stores no message text and no customer data.
+model AssistantLog {
+  id               String   @id @default(cuid())
+  userId           String?  @map("user_id")
+  intent           String
+  mode             String
+  provider         String
+  retrievalMs      Int?     @map("retrieval_ms")
+  generationMs     Int?     @map("generation_ms")
+  sourceChunkIds   String[] @map("source_chunk_ids")
+  promptTokens     Int?     @map("prompt_tokens")
+  completionTokens Int?     @map("completion_tokens")
+  error            String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("assistant_logs")
+}
