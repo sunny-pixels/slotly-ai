@@ -28,6 +28,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
   pages: { signIn: "/" },
   trustHost: true,
+  logger: {
+    error(error) {
+      // A session cookie signed with a different AUTH_SECRET (e.g. left over from another
+      // localhost app, or after rotating the secret) is simply treated as "signed out".
+      // Log one short line instead of a stack trace; the cookie is replaced on next sign-in.
+      if (error.name === "JWTSessionError") {
+        console.warn("[auth] ignored an invalid session cookie (signed with a different AUTH_SECRET); treating the visitor as signed out.");
+        return;
+      }
+      console.error("[auth]", error);
+    },
+  },
   providers: [
     Credentials({
       id: "demo",

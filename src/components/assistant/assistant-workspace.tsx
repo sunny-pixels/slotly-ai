@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, BookOpenText, CalendarClock, CheckCircle2, Database, FileText, LogIn, RefreshCw, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowUp, BookOpenText, CalendarClock, CheckCircle2, Database, FileText, LogIn, RefreshCw, Search, Sparkles, TriangleAlert } from "lucide-react";
 import type { AssistantReply, OpenSlot, SourceRef } from "@/lib/assistant-types";
 import { api, ApiError } from "@/lib/api-client";
 import { formatDuration, formatPrice } from "@/lib/money";
@@ -30,6 +30,102 @@ const SUGGESTIONS = [
   "Do you offer gift vouchers?",
 ];
 
+/** Example questions, grouped the way customers think about them. Each one is routed by the assistant as written. */
+const GUIDE: { title: string; icon: React.ComponentType<{ className?: string }>; needsAccount?: boolean; questions: string[] }[] = [
+  {
+    title: "Policies & info",
+    icon: BookOpenText,
+    questions: ["What is your cancellation policy?", "Can I reschedule my appointment?", "What are your opening hours on Saturday?", "Which payment methods do you accept?"],
+  },
+  {
+    title: "Find a service",
+    icon: Search,
+    questions: ["Which services do you offer?", "Recommend something for stress under £60", "Recommend something for back pain"],
+  },
+  {
+    title: "Open times",
+    icon: CalendarClock,
+    questions: ["Any massage slots tomorrow afternoon?", "Next available physio", "Meditation openings next week"],
+  },
+  {
+    title: "Your bookings",
+    icon: Database,
+    needsAccount: true,
+    questions: ["Show my upcoming bookings", "Book a massage on Monday morning", "Cancel my physio check-in"],
+  },
+];
+
+/** Context-aware follow-ups for the latest answer. Uses real data from the reply (service names, open times). */
+function relatedQuestions(reply: AssistantReply, signedIn: boolean, timeZone: string): { title: string; questions: string[] } {
+  const title = "Related to your last question";
+  const firstSlot = reply.slots?.[0];
+  switch (reply.intent) {
+    case "availability":
+    case "book":
+      if (firstSlot) {
+        const name = firstSlot.service.name;
+        return {
+          title,
+          questions: [
+            ...(signedIn
+              ? [`Book ${name} on ${formatInZone(firstSlot.startAt, "yyyy-MM-dd", timeZone)} at ${formatInZone(firstSlot.startAt, "HH:mm", timeZone)}`]
+              : []),
+            `${name} openings next week`,
+            `Tell me about ${name}`,
+            "What is your cancellation policy?",
+          ],
+        };
+      }
+      return { title, questions: ["Which services do you offer?", "Any massage slots tomorrow afternoon?", "What are your opening hours on Saturday?"] };
+    case "service_search": {
+      const names = (reply.services ?? []).slice(0, 2).map((s) => s.name);
+      return {
+        title,
+        questions: [...names.map((n) => `Next available ${n}`), "Which services are under £50?", "What should I expect on my first visit?"],
+      };
+    }
+    case "my_bookings":
+    case "cancel":
+      return {
+        title,
+        questions: ["What is your cancellation policy?", "Can I reschedule my appointment?", ...(reply.bookings?.length ? [] : ["Which services do you offer?"])],
+      };
+    case "greeting":
+      return { title: "Good places to start", questions: ["Which services do you offer?", "What is your cancellation policy?", "Any massage slots tomorrow afternoon?"] };
+    default:
+      if (reply.mode === "no_answer" || reply.confidence === "low") {
+        return {
+          title: "Questions I can answer well",
+          questions: ["What is your cancellation policy?", "What are your opening hours on Saturday?", "Can I have my session by video call?"],
+        };
+      }
+      return {
+        title,
+        questions: ["Can I reschedule my appointment?", "What happens if I don't turn up?", "Which payment methods do you accept?", "Which services do you offer?"],
+      };
+  }
+}
+
+function QuestionList({ questions, onAsk, disabled }: { questions: string[]; onAsk: (q: string) => void; disabled?: boolean }) {
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {questions.map((q) => (
+        <li key={q}>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onAsk(q)}
+            className="group flex w-full items-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-left text-[0.8125rem] text-ink transition-colors hover:border-brand-soft hover:bg-accent-faint disabled:opacity-50"
+          >
+            <span className="flex-1">{q}</span>
+            <ArrowUp className="size-3.5 shrink-0 rotate-45 text-ink-subtle transition-colors group-hover:text-brand" aria-hidden />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 const uid = () => Math.random().toString(36).slice(2);
 
 export function AssistantWorkspace({
@@ -51,16 +147,21 @@ export function AssistantWorkspace({
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [bookingSlot, setBookingSlot] = useState<OpenSlot | null>(null);
-  const [activeSourcesId, setActiveSourcesId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sentInitial = useRef(false);
+  const guideRef = useRef<HTMLElement>(null);
 
-  const lastWithSources = useMemo(() => {
-    const replies = messages.filter((m): m is Extract<Message, { role: "assistant" }> => m.role === "assistant");
-    const chosen = activeSourcesId ? replies.find((m) => m.id === activeSourcesId) : undefined;
-    return chosen ?? [...replies].reverse().find((m) => m.reply.sources.length > 0);
-  }, [messages, activeSourcesId]);
+  // Follow-up questions that fit the most recent answer.
+  const related = useMemo(() => {
+    const last = [...messages].reverse().find((m): m is Extract<Message, { role: "assistant" }> => m.role === "assistant");
+    return last ? relatedQuestions(last.reply, signedIn, timeZone) : null;
+  }, [messages, signedIn, timeZone]);
+
+  // Bring fresh follow-up questions into view after each answer.
+  useEffect(() => {
+    if (related) guideRef.current?.scrollTo({ top: 0 });
+  }, [related]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -80,7 +181,6 @@ export function AssistantWorkspace({
     try {
       const { reply } = await api<{ reply: AssistantReply }>("/api/assistant/chat", { method: "POST", json: { message, history } });
       setMessages((prev) => [...prev, { id: reply.id, role: "assistant", reply }]);
-      setActiveSourcesId(null);
     } catch (e) {
       const text =
         e instanceof ApiError && e.status === 429
@@ -120,7 +220,8 @@ export function AssistantWorkspace({
                   anything without your confirmation.
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <p className="hidden text-meta text-ink-muted lg:block">Pick a question from <strong className="font-medium text-ink">Try asking</strong> on the right, or type your own below.</p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:hidden">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
@@ -149,8 +250,6 @@ export function AssistantWorkspace({
                       timeZone={timeZone}
                       onSuggestion={(s) => void send(s)}
                       onBook={(slot) => setBookingSlot(slot)}
-                      onShowSources={() => setActiveSourcesId(m.id)}
-                      sourcesActive={lastWithSources?.id === m.id}
                     />
                   )}
                   {m.role === "event" && (
@@ -230,33 +329,38 @@ export function AssistantWorkspace({
         </form>
       </section>
 
-      {/* ── Context panel: sources for the selected answer ─────────────── */}
-      <aside aria-labelledby="sources-heading" className="hidden min-h-0 flex-col gap-4 overflow-y-auto lg:flex">
+      {/* ── Question guide: what a new customer can ask ───────────────── */}
+      <aside ref={guideRef} aria-labelledby="guide-heading" className="hidden min-h-0 flex-col gap-5 overflow-y-auto pb-2 lg:flex">
         <div>
-          <h2 id="sources-heading" className="text-section font-semibold">
-            Sources
+          <h2 id="guide-heading" className="text-section font-semibold">
+            Try asking
           </h2>
-          <p className="text-meta text-ink-muted">Passages retrieved from the knowledge base for the selected answer.</p>
+          <p className="text-meta text-ink-muted">Not sure what to type? Click any question to send it.</p>
         </div>
-        {lastWithSources ? (
-          <ol className="flex flex-col gap-3">
-            {lastWithSources.reply.sources.map((s) => (
-              <SourceCard key={s.chunkId} source={s} />
-            ))}
-          </ol>
-        ) : (
-          <div className="rounded-lg border border-dashed border-line-strong p-5 text-meta text-ink-muted">
-            <BookOpenText className="mb-2 size-5 text-ink-subtle" aria-hidden />
-            Ask a policy or service question and the exact passages used will appear here.
-          </div>
+
+        {related && related.questions.length > 0 && (
+          <section aria-labelledby="related-heading" className="rounded-lg border border-brand-soft/30 bg-accent-faint/50 p-4">
+            <h3 id="related-heading" className="mb-2.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-brand">
+              <Sparkles className="size-3.5" aria-hidden /> {related.title}
+            </h3>
+            <QuestionList questions={related.questions} onAsk={(q) => void send(q)} disabled={pending} />
+          </section>
         )}
-        <div className="mt-auto space-y-2 rounded-lg bg-canvas-sunken/70 p-4 text-meta text-ink-muted">
-          <p className="flex items-center gap-2 font-medium text-ink">
-            <Database className="size-4 text-brand-soft" aria-hidden /> How answers work
+
+        {GUIDE.filter((g) => signedIn || !g.needsAccount).map((group) => (
+          <section key={group.title} aria-labelledby={`guide-${group.title}`}>
+            <h3 id={`guide-${group.title}`} className="mb-2 flex items-center gap-2 text-label font-semibold uppercase text-ink-subtle">
+              <group.icon className="size-3.5" aria-hidden /> {group.title}
+            </h3>
+            <QuestionList questions={group.questions} onAsk={(q) => void send(q)} disabled={pending} />
+          </section>
+        ))}
+
+        {!signedIn && (
+          <p className="rounded-lg bg-canvas-sunken/70 p-3 text-meta text-ink-muted">
+            Choose a demo account (bottom of the sidebar) to also ask about <em>your</em> bookings, book or cancel.
           </p>
-          <p>Policy answers are grounded in Slotly&rsquo;s published documents. If the documents don&rsquo;t cover something, the assistant says so.</p>
-          <p>Availability, prices charged and booking status are read from the booking database at the moment you ask.</p>
-        </div>
+        )}
       </aside>
 
       <ConfirmBookingDialog
@@ -335,10 +439,10 @@ function CitedText({ text, sources }: { text: string; sources: SourceRef[] }) {
 }
 
 const modeLabel: Partial<Record<AssistantReply["mode"], { text: string; icon: React.ComponentType<{ className?: string }> }>> = {
-  llm: { text: "Grounded answer", icon: BookOpenText },
-  extractive: { text: "Quoted from documentation", icon: FileText },
-  no_answer: { text: "Not in the knowledge base", icon: TriangleAlert },
-  tool: { text: "Live booking data", icon: Database },
+  llm: { text: "Answer based on Slotly’s documents", icon: BookOpenText },
+  extractive: { text: "Quoted from Slotly’s documents", icon: FileText },
+  no_answer: { text: "Not covered by Slotly’s documents", icon: TriangleAlert },
+  tool: { text: "Checked live in the booking system", icon: Database },
   error: { text: "Assistant unavailable", icon: TriangleAlert },
 };
 
@@ -348,20 +452,16 @@ function AssistantMessage({
   timeZone,
   onSuggestion,
   onBook,
-  onShowSources,
-  sourcesActive,
 }: {
   reply: AssistantReply;
   signedIn: boolean;
   timeZone: string;
   onSuggestion: (s: string) => void;
   onBook: (slot: OpenSlot) => void;
-  onShowSources: () => void;
-  sourcesActive: boolean;
 }) {
   const mode =
     reply.mode === "extractive" && reply.confidence === "low"
-      ? { text: "Closest match in documentation — may not answer this", icon: TriangleAlert }
+      ? { text: "Closest match in Slotly’s documents — may not answer this", icon: TriangleAlert }
       : modeLabel[reply.mode];
   const [showInline, setShowInline] = useState(false);
   const slotsByDay = useMemo(() => {
@@ -400,20 +500,16 @@ function AssistantMessage({
             ))}
             <button
               type="button"
-              onClick={() => {
-                onShowSources();
-                setShowInline((v) => !v);
-              }}
+              onClick={() => setShowInline((v) => !v)}
               aria-expanded={showInline}
               className="text-[0.75rem] font-medium text-brand underline-offset-4 hover:underline"
             >
-              <span className="lg:hidden">{showInline ? "Hide passages" : "Show passages"}</span>
-              <span className="hidden lg:inline">{sourcesActive ? "Passages shown in panel →" : "Show passages"}</span>
+              {showInline ? "Hide where this came from" : "Show where this came from"}
             </button>
           </div>
         )}
         {showInline && reply.sources.length > 0 && (
-          <ol className="flex flex-col gap-2 lg:hidden">
+          <ol className="flex flex-col gap-2">
             {reply.sources.map((s) => (
               <SourceCard key={s.chunkId} source={s} />
             ))}

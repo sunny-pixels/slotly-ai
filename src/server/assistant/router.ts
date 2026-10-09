@@ -168,14 +168,41 @@ export function classifyIntent(message: string): Intent {
   const isQuestionAboutRules =
     /\b(policy|policies|fee|fees|charge|charged|refund|deposit|rule|rules|allowed|penalt|how (far|long|much|many|do|does|can)|what happens|is there|do you|can i|am i)\b/.test(text);
 
-  if (/^(hi|hello|hey|good (morning|afternoon|evening)|help|what can you do)\b[!.?\s]*$/.test(text)) return "greeting";
-
-  if (parseReference(text) && /\bcancel/.test(text)) return "cancel";
-  if (/\b(please |can you |could you |i (want|need|would like|'d like) to |go ahead and )?cancel (my|the|this|that|our)\b.*\b(booking|appointment|reservation|session)\b/.test(text) && !/\b(policy|fee|refund|charge|how|what happens|rules?)\b/.test(text)) {
-    return "cancel";
+  // Small talk and questions about the assistant itself — never sent to document search.
+  if (
+    /^(hi|hiya|hello|hey|good (morning|afternoon|evening)|help|thanks?( you)?|thank you|ok(ay)?)\b[!.?\s]*$/.test(text) ||
+    /\b(who are you|what are you|who am i (talking|speaking) to|what can you (do|help( me)? with)|how (can|do) you help|are you (a bot|an ai|ai|human|a human|real))\b/.test(text)
+  ) {
+    return "greeting";
   }
 
-  if (/\b(my|upcoming|existing) (bookings|appointments|reservations)\b|\bwhat (have i|did i) book|\bshow (me )?my\b/.test(text)) return "my_bookings";
+  // Cancellation *actions* ("cancel the physio check-in"), as opposed to questions about the
+  // cancellation *policy* ("can I cancel for free?", "what happens if I cancel late?").
+  const asksAboutCancelRules = /\b(policy|policies|fee|fees|refund|charge|charged|free|late|how|what happens|rules?|can i|am i|allowed)\b/.test(text);
+  if (parseReference(text) && /\bcancel/.test(text)) return "cancel";
+  if (!asksAboutCancelRules) {
+    if (/^(please |pls |kindly |just )?(cancel|call off)\b/.test(text)) return "cancel";
+    if (/\b(can you|could you|please|i (want|need|would like|'d like) to|go ahead and|help me) (cancel|call off)\b/.test(text)) return "cancel";
+    if (/\bcancel (my|the|this|that|our)\b.*\b(booking|appointment|reservation|session)\b/.test(text)) return "cancel";
+  }
+
+  if (
+    !/\bcancel/.test(text) &&
+    // "Can I reschedule my appointment?" is a policy question, not a request to list bookings.
+    !/\b(can i|how do i|how can i|am i|is it|policy|reschedul|move|change)\b/.test(text) &&
+    /\b(my|upcoming|existing) (bookings?|appointments?|reservations?)\b|\bwhat (have i|did i) book|\bshow (me )?my\b|\bdo i have any\b/.test(text)
+  ) {
+    return "my_bookings";
+  }
+
+  // "What services do you have?", "list the available services", "what do you offer?"
+  if (
+    (/\b(services|treatments|sessions|options)\b/.test(text) && /\b(what|which|list|show|available|current|all|offer|have|provide)\b/.test(text)) ||
+    /\bwhat (else )?do you (offer|do|provide)\b/.test(text)
+  ) {
+    const aboutTimes = /\b(slots?|times?|when|today|tomorrow|tonight|morning|afternoon|evening|week|weekend|mon|tue|wed|thu|fri|sat|sun)\w*\b/.test(text);
+    if (!aboutTimes && !/\b(policy|cancel|refund|fee|hours|open|opening)\b/.test(text)) return "service_search";
+  }
 
   if (
     /^(please )?(book|reserve)\b|\b(i('d| would) like to|i want to|i need to|can you|could you|please|let's|help me) (book|reserve|schedule)\b|\bbook (me|it|that|this|a|an|the)\b/.test(text) &&
@@ -184,7 +211,9 @@ export function classifyIntent(message: string): Intent {
     return "book";
   }
 
-  if (/\b(availab|free slot|free time|openings?|open slots?|any (slots|times|space|spaces|appointments)|when can i|next (available|free|open)|what times|which times|slots? (on|for|tomorrow|today|this|next))\b/.test(text)) {
+  if (
+    !/\bopening (hours|times)\b|\bwhen (are|is) (you|the studio) open\b/.test(text) &&
+    /\b(availab\w*|free slots?|free time|openings?|open slots?|any (slots|times|space|spaces|appointments)|when can i|next (available|free|open)|what times|which times|slots? (on|for|tomorrow|today|this|next))\b/.test(text)) {
     return "availability";
   }
 

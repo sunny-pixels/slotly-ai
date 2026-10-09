@@ -64,12 +64,18 @@ async function dispatch(
       return {
         ...base,
         mode: "tool",
-        text: "Hi! I can answer questions about Slotly's services and policies, find live open times, and help you book or cancel. What would you like to do?",
+        text: /\b(who|what) are you\b|\bare you\b/i.test(message)
+          ? "I'm Slotly's booking assistant. I answer questions from the studio's published documents (services, opening hours, booking and cancellation policies) and check open times and your bookings directly in the booking system. I can prepare a booking or a cancellation for you, but nothing changes until you confirm it. What would you like to do?"
+          : "Hi! I can answer questions about Slotly's services and policies, find live open times, and help you book or cancel. What would you like to do?",
         suggestions: DEFAULT_SUGGESTIONS,
       };
 
     case "service_search": {
-      const query = req.maxPrice || req.maxDuration ? stripBudget(message) : message;
+      // "What services do you have?" lists everything; descriptive needs ("something for back pain") use semantic matching.
+      const wantsFullList =
+        /\b(all|list|available|current|what services|which services|what do you (offer|do|provide)|services do you)\b/i.test(message) &&
+        !/\b(for|help|with|need|recommend|suggest|best|good)\b/i.test(message);
+      const query = wantsFullList ? undefined : req.maxPrice || req.maxDuration ? stripBudget(message) : message;
       const res = await tools.search_services({ query, maxPrice: req.maxPrice, maxDuration: req.maxDuration });
       const criteria = [
         req.maxPrice !== undefined ? `under ${formatPrice(req.maxPrice * 100, "GBP")}` : null,
@@ -179,12 +185,27 @@ async function dispatch(
       }
       const upcoming = await tools.get_my_bookings(actor);
       if (upcoming.length === 0) return { ...base, mode: "tool", text: "You don't have any upcoming bookings to cancel." };
-      if (upcoming.length === 1) return cancellationReply(base, upcoming[0]);
+      // "Cancel the physio check-in" → narrow to bookings for that service (and day, if one was given).
+      const named = serviceName(req.serviceId);
+      const candidates = upcoming.filter(
+        (b) =>
+          (!req.serviceId || b.service.id === req.serviceId) &&
+          (!req.specificDay || formatInZone(b.slot.startAt, "yyyy-MM-dd", tz) === req.dateFrom),
+      );
+      if (candidates.length === 0) {
+        return {
+          ...base,
+          mode: "clarify",
+          text: `I couldn't find an upcoming ${named ? `${named} ` : ""}booking${req.specificDay ? " on that day" : ""} on your account. Here are your upcoming bookings — which one should I cancel?`,
+          bookings: upcoming,
+        };
+      }
+      if (candidates.length === 1) return cancellationReply(base, candidates[0]);
       return {
         ...base,
         mode: "clarify",
-        text: "Which booking would you like to cancel? Choose one below, or tell me its reference (e.g. SLT-ABC234).",
-        bookings: upcoming,
+        text: `You have ${candidates.length} upcoming ${named ? `${named} ` : ""}bookings. Which one would you like to cancel? Choose below, or tell me its reference (e.g. SLT-ABC234).`,
+        bookings: candidates,
       };
     }
 
