@@ -498,11 +498,36 @@ Requirement: `TEST_DATABASE_URL` must point to a PostgreSQL database with `pgvec
 
 ## Deployment
 
-- **Vercel or any Node host.** Set the env vars and run `pnpm build && pnpm start`. Run `pnpm db:migrate && pnpm db:verify` in the release step, against `DIRECT_URL`.
-- **Database.** Use Neon's pooled URL for the app and the direct URL for migrations. Interactive transactions work through Neon's pooler.
-- **Local embeddings** need the Node runtime (not Edge) and ~150 MB RAM for the model. On serverless platforms the model downloads on cold start unless `.cache/models` is bundled or cached. Alternatively set `EMBEDDING_PROVIDER=gemini`.
-- **Before real customers:** set `DEMO_ACCOUNTS_ENABLED=false` and add a real Auth.js provider. Replace the in-memory rate limiter with Redis/Upstash or a DB-backed limiter. Run `pnpm db:seed` only for demo environments.
-- **Slots** are generated ahead of time. Schedule a daily job, or use the admin "Generate slots" form, to keep the calendar published ahead.
+### Vercel (recommended)
+1. Push the repo to GitHub. On **vercel.com**, choose **Add New… → Project** and import the repository. Next.js and pnpm are detected automatically.
+2. Under **Environment Variables**, add the values from `.env`:
+   - `DATABASE_URL`, `DIRECT_URL`
+   - a **new** `AUTH_SECRET` (`npx auth secret`), and `AUTH_TRUST_HOST=true`
+   - `DEMO_ACCOUNTS_ENABLED`, the `SEED_*_EMAIL`s and `BUSINESS_TIMEZONE`
+   - the `EMBEDDING_*`, `LLM_*` and `RAG_*` values
+
+   Do **not** add `TEST_DATABASE_URL`.
+3. Optionally, to apply new migrations on every deploy, set **Build Command** to `pnpm db:migrate && pnpm build`.
+4. Deploy.
+
+What this repo already configures for Vercel:
+- **`vercel.json`** pins functions to `sin1` (Singapore), next to the Neon database in `ap-southeast-1`. Change it if your database is elsewhere.
+- **`pnpm-workspace.yaml`**:
+  - `nodeLinker: hoisted` gives a flat `node_modules`, so file tracing can include `onnxruntime-node`. transformers.js loads it with a runtime `require` that tracing can't follow.
+  - onnxruntime's install script is skipped; on Linux x64 it would download optional CUDA (GPU) binaries.
+- **`next.config.ts`** explicitly includes onnxruntime's JS and **Linux x64** binaries for the assistant and knowledge-base routes, and excludes the other platforms. Those functions are ~60 MB against Vercel's 250 MB limit; the booking routes are ~7 MB.
+- **Model cache.** Models download to `/tmp` on Vercel, because the deployment folder is read-only (`src/server/rag/model-cache.ts`).
+
+**Cold starts.** The first assistant request on a fresh instance downloads and loads the local models (~216 MB) into `/tmp`, so expect it to be slow. Warm instances reuse them, and booking pages never load the models. If that matters, set `EMBEDDING_PROVIDER=gemini` with a free key and run `pnpm kb:ingest --force`.
+
+### Any other Node host
+Set the env vars, run `pnpm install && pnpm build && pnpm start`, and run `pnpm db:migrate && pnpm db:verify` in the release step.
+
+### Before real customers
+- Set `DEMO_ACCOUNTS_ENABLED=false` and add a real Auth.js provider. On a public demo deployment, **anyone can act as the admin**.
+- Replace the in-memory rate limiter with Redis/Upstash or a DB-backed limiter.
+- Run `pnpm db:seed` only for demo environments.
+- Slots are generated ahead of time. Use the admin "Generate slots" form or a scheduled job to keep the calendar published.
 
 ---
 

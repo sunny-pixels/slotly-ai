@@ -1,9 +1,15 @@
+# Flat node_modules: lets Vercel's file tracer include runtime-loaded native deps
+# (onnxruntime-node for local embeddings) at predictable paths.
+nodeLinker: hoisted
+
 ignoredBuiltDependencies:
   - unrs-resolver
   - workerd
+  # Its install script only downloads optional CUDA (GPU) binaries on Linux x64 —
+  # hundreds of MB that would bloat serverless bundles. CPU binaries ship in the package.
+  - onnxruntime-node
 
 onlyBuiltDependencies:
-  - onnxruntime-node
   - protobufjs
   - esbuild
   - sharp

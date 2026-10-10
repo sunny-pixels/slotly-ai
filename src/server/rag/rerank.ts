@@ -1,4 +1,4 @@
-import path from "node:path";
+import { modelCacheDir } from "./model-cache";
 import { getConfig } from "@/lib/config";
 
 /**
@@ -30,7 +30,7 @@ class LocalCrossEncoder implements Reranker {
     if (!this.loaded) {
       this.loaded = (async () => {
         const { AutoTokenizer, AutoModelForSequenceClassification, env } = await import("@huggingface/transformers");
-        env.cacheDir = path.join(process.cwd(), ".cache", "models");
+        env.cacheDir = modelCacheDir();
         const tokenizer = (await AutoTokenizer.from_pretrained(this.modelId)) as unknown as Tokenizer;
         const model = (await AutoModelForSequenceClassification.from_pretrained(this.modelId, { dtype: "fp32" })) as unknown as Model;
         return { tokenizer, model };

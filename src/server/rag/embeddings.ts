@@ -1,4 +1,4 @@
-import path from "node:path";
+import { modelCacheDir } from "./model-cache";
 import { createHash } from "node:crypto";
 import { EMBEDDING_DIMENSIONS, getConfig } from "@/lib/config";
 
@@ -61,7 +61,7 @@ class LocalEmbeddingProvider implements EmbeddingProvider {
     if (!this.extractor) {
       this.extractor = (async () => {
         const { pipeline, env } = await import("@huggingface/transformers");
-        env.cacheDir = path.join(process.cwd(), ".cache", "models");
+        env.cacheDir = modelCacheDir();
         const fe = await pipeline("feature-extraction", this.model, { dtype: "fp32" });
         return fe as unknown as FeatureExtractor;
       })().catch((error) => {
