@@ -7,6 +7,8 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import {
   BookOpenText,
   CalendarCheck2,
+  ChevronsUpDown,
+  Compass,
   CalendarClock,
   ClipboardList,
   LayoutDashboard,
@@ -35,6 +37,8 @@ import {
 import { continueAsAction, signOutAction } from "@/app/actions/auth";
 import { DEMO_ACCOUNTS } from "@/lib/demo-accounts";
 import { AccountPicker } from "./account-picker";
+import { DemoAccountHint } from "@/components/onboarding/demo-account-hint";
+import { openTour } from "@/lib/use-local-flag";
 import { Logo } from "./logo";
 
 export type ShellUser = { name: string; email: string; role: "CUSTOMER" | "ADMIN" } | null;
@@ -120,12 +124,17 @@ export function UserMenu({ user, compact = false }: { user: ShellUser; compact?:
       <Popover>
         <PopoverTrigger
           className={cn(
-            "flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-[0.875rem] font-medium text-ink-muted hover:bg-canvas-sunken hover:text-ink data-[state=open]:bg-canvas-sunken",
-            compact && "justify-center px-0 xl:justify-start xl:px-2.5",
+            "flex w-full items-center gap-3 rounded-lg bg-brand p-2 text-left text-white shadow-xs transition-colors hover:bg-brand-hover data-[state=open]:bg-brand-strong",
+            compact && "justify-center xl:justify-start",
           )}
         >
-          <LogIn className="size-4.5" />
-          <span className={cn(compact && "sr-only xl:not-sr-only")}>Continue as…</span>
+          <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-brand-strong">
+            <LogIn className="size-4" />
+          </span>
+          <span className={cn("min-w-0 flex-1", compact && "sr-only xl:not-sr-only")}>
+            <span className="block text-[0.8125rem] font-semibold">Continue as…</span>
+            <span className="block truncate text-[0.75rem] text-white/70">Choose a demo account</span>
+          </span>
         </PopoverTrigger>
         <PopoverContent side="top" className="w-80">
           <p className="mb-3 px-1 text-meta text-ink-muted">Demo accounts — no password needed.</p>
@@ -138,17 +147,18 @@ export function UserMenu({ user, compact = false }: { user: ShellUser; compact?:
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-md p-1.5 text-left hover:bg-canvas-sunken data-[state=open]:bg-canvas-sunken",
+          "flex w-full items-center gap-2.5 rounded-lg bg-brand p-2 text-left text-white shadow-xs transition-colors hover:bg-brand-hover data-[state=open]:bg-brand-strong",
           compact && "justify-center xl:justify-start",
         )}
       >
-        <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand text-[0.75rem] font-semibold text-accent">
+        <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-[0.75rem] font-bold text-brand-strong">
           {initials(user.name) || <UserRound className="size-4" />}
         </span>
         <span className={cn("min-w-0 flex-1", compact && "sr-only xl:not-sr-only")}>
-          <span className="block truncate text-[0.8125rem] font-semibold text-ink">{user.name}</span>
-          <span className="block truncate text-[0.75rem] text-ink-muted">{user.role === "ADMIN" ? "Administrator" : user.email}</span>
+          <span className="block truncate text-[0.8125rem] font-semibold">{user.name}</span>
+          <span className="block truncate text-[0.75rem] text-white/70">{user.role === "ADMIN" ? "Administrator" : user.email}</span>
         </span>
+        <ChevronsUpDown className={cn("size-4 shrink-0 text-white/60", compact && "hidden xl:block")} aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" className="w-56">
         <DropdownMenuLabel>
@@ -188,6 +198,24 @@ export function UserMenu({ user, compact = false }: { user: ShellUser; compact?:
   );
 }
 
+/** Re-opens the welcome tour. */
+function TourLink({ compact = false }: { compact?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={openTour}
+      title={compact ? "Product tour" : undefined}
+      className={cn(
+        "group flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-[0.875rem] font-medium text-ink-muted transition-colors hover:bg-canvas-sunken hover:text-ink",
+        compact && "justify-center px-0 xl:justify-start xl:px-2.5",
+      )}
+    >
+      <Compass className="size-4.5 shrink-0 text-ink-subtle group-hover:text-ink-muted" />
+      <span className={cn(compact && "sr-only xl:not-sr-only")}>Product tour</span>
+    </button>
+  );
+}
+
 /** Desktop/tablet sidebar: icon rail at md–lg, full labels from xl. */
 export function Sidebar({ user }: { user: ShellUser }) {
   return (
@@ -205,7 +233,13 @@ export function Sidebar({ user }: { user: ShellUser }) {
       <div className="flex-1 overflow-y-auto px-3 py-5">
         <NavLinks user={user} compact />
       </div>
+      <div className="px-3 pb-2">
+        <TourLink compact />
+      </div>
       <div className="border-t border-line p-3">
+        <div className="hidden xl:block">
+          <DemoAccountHint signedIn={Boolean(user)} />
+        </div>
         <UserMenu user={user} compact />
       </div>
     </aside>
@@ -233,7 +267,11 @@ export function MobileNav({ user }: { user: ShellUser }) {
           <div className="flex-1 overflow-y-auto px-3 py-5">
             <NavLinks user={user} onNavigate={() => setOpen(false)} />
           </div>
+          <div className="px-3 pb-2" onClick={() => setOpen(false)}>
+            <TourLink />
+          </div>
           <div className="border-t border-line p-3">
+            <DemoAccountHint signedIn={Boolean(user)} />
             <UserMenu user={user} />
           </div>
         </SheetContent>

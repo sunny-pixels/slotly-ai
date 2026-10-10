@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/server/authz";
 import { MobileNav, Sidebar, type ShellUser } from "@/components/shell/nav";
+import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 
 /**
  * Full-width application shell: a navigation sidebar plus a flexible workspace
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+      <WelcomeTour currentUserName={user?.name ?? null} />
     </div>
   );
 }

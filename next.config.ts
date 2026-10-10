@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // Native / heavy server-only packages: keep them out of the bundler.
   serverExternalPackages: ["@huggingface/transformers", "onnxruntime-node", "pg", "bcryptjs"],
   poweredByHeader: false,
+  // Keep the dev-only indicator away from the sidebar's account panel (bottom-left).
+  devIndicators: { position: "bottom-right" },
   turbopack: {
     rules: {
       "*.css": {

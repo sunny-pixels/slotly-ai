@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+// Skip first-visit onboarding (welcome tour + account hint) so it doesn't cover the UI under test.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("slotly.tour.seen.v1", "1");
+    window.localStorage.setItem("slotly.account-hint.dismissed.v1", "1");
+  });
+});
+
 test("customer books an open slot, sees it in My bookings, then cancels it", async ({ page }) => {
   // 1. Pick the demo customer from the sidebar switcher.
   await page.goto("/");
