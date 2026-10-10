@@ -22,9 +22,9 @@ const SERVICES = [
     name: "Strategy Consultation",
     category: "Consultations",
     durationMinutes: 60,
-    priceCents: 9500,
+    priceCents: 350000, // ₹3,500 (amounts are in paise)
     description:
-      "A focused one-to-one session with a senior business strategist. Bring a challenge — a launch, pricing, hiring or fundraising — and leave with a prioritised action plan.",
+      "A focused one-to-one session with a senior business strategist. Bring a challenge — a launch, pricing, hiring or fundraising — and leave with a prioritized action plan.",
     rules: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, openTime: "09:00", closeTime: "17:00", slotIntervalMinutes: 60 })),
   },
   {
@@ -32,7 +32,7 @@ const SERVICES = [
     name: "Career Coaching",
     category: "Coaching",
     durationMinutes: 45,
-    priceCents: 7000,
+    priceCents: 200000, // ₹2,000
     description:
       "Practical coaching for career changes, promotions and job searches: CV and LinkedIn reviews, interview practice, salary negotiation and planning your next move.",
     rules: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, openTime: "10:00", closeTime: "18:00", slotIntervalMinutes: 60 })),
@@ -42,7 +42,7 @@ const SERVICES = [
     name: "Deep Tissue Massage",
     category: "Wellness",
     durationMinutes: 60,
-    priceCents: 6500,
+    priceCents: 250000, // ₹2,500
     description:
       "Firm-pressure massage targeting chronic tension and knots in the back, neck and shoulders. Ideal for desk workers, regular trainers, and anyone carrying stress physically.",
     rules: [
@@ -55,7 +55,7 @@ const SERVICES = [
     name: "Guided Meditation",
     category: "Wellness",
     durationMinutes: 30,
-    priceCents: 2500,
+    priceCents: 50000, // ₹500
     description:
       "A calm, beginner-friendly session of guided breathing and mindfulness to help with stress, anxiety or poor sleep. No experience needed.",
     rules: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, openTime: "09:00", closeTime: "18:00", slotIntervalMinutes: 45 })),
@@ -65,7 +65,7 @@ const SERVICES = [
     name: "Nutrition Assessment",
     category: "Health",
     durationMinutes: 50,
-    priceCents: 5500,
+    priceCents: 150000, // ₹1,500
     description:
       "A registered nutritionist reviews your eating habits, energy and goals, then builds a realistic meal plan for weight, performance or digestive comfort.",
     rules: [2, 4].map((weekday) => ({ weekday, openTime: "09:00", closeTime: "17:00", slotIntervalMinutes: 60 })),
@@ -75,7 +75,7 @@ const SERVICES = [
     name: "Physio Check-in",
     category: "Health",
     durationMinutes: 30,
-    priceCents: 4500,
+    priceCents: 90000, // ₹900
     description:
       "A short physiotherapy assessment for aches, minor sports injuries or back pain, with hands-on treatment where appropriate and exercises to continue at home.",
     rules: [
@@ -98,10 +98,10 @@ async function main() {
   console.log(`Seeding Slotly demo data (business time zone ${tz})`);
 
   // ── Users ──────────────────────────────────────────────────────────────────
-  const admin = await upsertUser(demoAccountEmail("admin"), "Ava Patel", "ADMIN");
-  const maya = await upsertUser(demoAccountEmail("maya"), "Maya Chen", "CUSTOMER");
-  const sam = await upsertUser(demoAccountEmail("sam"), "Sam Okafor", "CUSTOMER");
-  console.log(`  users: ${admin.email} (admin), ${maya.email}, ${sam.email}`);
+  const admin = await upsertUser(demoAccountEmail("admin"), "Priya Iyer", "ADMIN");
+  const ananya = await upsertUser(demoAccountEmail("ananya"), "Ananya Sharma", "CUSTOMER");
+  const rohan = await upsertUser(demoAccountEmail("rohan"), "Rohan Mehta", "CUSTOMER");
+  console.log(`  users: ${admin.email} (admin), ${ananya.email}, ${rohan.email}`);
 
   // ── Services, opening hours, slots ─────────────────────────────────────────
   const today = todayKey(tz, now);
@@ -109,11 +109,14 @@ async function main() {
   const serviceIds: Record<string, string> = {};
   for (const s of SERVICES) {
     const { rules, ...data } = s;
-    const service = await prisma.service.upsert({
-      where: { slug: s.slug },
-      create: { ...data, currency: "GBP" },
-      update: {},
-    });
+    const existing = await prisma.service.findUnique({ where: { slug: s.slug }, select: { id: true, currency: true } });
+    // One-time move of the demo catalogue from GBP to INR. Services an admin has already
+    // repriced in INR are left alone; only old GBP demo rows are converted.
+    const service = existing
+      ? existing.currency === "GBP"
+        ? await prisma.service.update({ where: { id: existing.id }, data: { priceCents: s.priceCents, currency: "INR" } })
+        : existing
+      : await prisma.service.create({ data: { ...data, currency: "INR" } });
     serviceIds[s.slug] = service.id;
     if ((await prisma.availabilityRule.count({ where: { serviceId: service.id } })) === 0) {
       await prisma.availabilityRule.createMany({ data: rules.map((r) => ({ ...r, serviceId: service.id, timezone: tz })) });
@@ -142,10 +145,10 @@ async function main() {
   };
 
   const demoBookings: { ref: string; slug: string; days: number; time?: string; customerId: string; status: "CONFIRMED" | "CANCELLED" }[] = [
-    { ref: "SLT-DEMO01", slug: "deep-tissue-massage", days: 3, time: "10:15", customerId: maya.id, status: "CONFIRMED" },
-    { ref: "SLT-DEMO02", slug: "physio-check-in", days: 6, customerId: maya.id, status: "CONFIRMED" },
-    { ref: "SLT-DEMO03", slug: "strategy-consultation", days: 2, time: "11:00", customerId: maya.id, status: "CANCELLED" },
-    { ref: "SLT-DEMO04", slug: "career-coaching", days: 2, time: "14:00", customerId: sam.id, status: "CONFIRMED" },
+    { ref: "SLT-DEMO01", slug: "deep-tissue-massage", days: 3, time: "10:15", customerId: ananya.id, status: "CONFIRMED" },
+    { ref: "SLT-DEMO02", slug: "physio-check-in", days: 6, customerId: ananya.id, status: "CONFIRMED" },
+    { ref: "SLT-DEMO03", slug: "strategy-consultation", days: 2, time: "11:00", customerId: ananya.id, status: "CANCELLED" },
+    { ref: "SLT-DEMO04", slug: "career-coaching", days: 2, time: "14:00", customerId: rohan.id, status: "CONFIRMED" },
   ];
 
   for (const b of demoBookings) {
@@ -160,7 +163,7 @@ async function main() {
         customerId: b.customerId,
         status: b.status,
         priceCents: service.priceCents,
-        currency: "GBP",
+        currency: "INR",
         ...(b.status === "CANCELLED" ? { cancelledAt: now, cancelledById: b.customerId } : {}),
       },
     });
@@ -176,9 +179,21 @@ async function main() {
       update: {},
     });
     await prisma.booking.create({
-      data: { publicReference: "SLT-DEMO05", slotId: slot.id, customerId: maya.id, status: "COMPLETED", priceCents: 2500, currency: "GBP" },
+      data: { publicReference: "SLT-DEMO05", slotId: slot.id, customerId: ananya.id, status: "COMPLETED", priceCents: 50000, currency: "INR" },
     });
   }
+
+  // Existing bookings priced in GBP (made before the switch to rupees) take the INR
+  // price of their service, so the demo never mixes currencies.
+  const gbpBookings = await prisma.booking.findMany({
+    where: { currency: "GBP" },
+    select: { id: true, slot: { select: { service: { select: { priceCents: true, currency: true } } } } },
+  });
+  for (const b of gbpBookings) {
+    if (b.slot.service.currency !== "INR") continue;
+    await prisma.booking.update({ where: { id: b.id }, data: { priceCents: b.slot.service.priceCents, currency: "INR" } });
+  }
+  if (gbpBookings.length) console.log(`  converted ${gbpBookings.length} GBP bookings to INR`);
   console.log(`  bookings: ${await prisma.booking.count()} total`);
 
   // ── Knowledge base ─────────────────────────────────────────────────────────

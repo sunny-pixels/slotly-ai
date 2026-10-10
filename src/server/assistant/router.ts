@@ -82,7 +82,7 @@ export function parseDate(message: string, todayKey: string, tz: string): Pick<P
   const dm = text.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/);
   const md = text.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b/);
   const dayMonth = dm ? { day: Number(dm[1]), month: MONTHS.indexOf(dm[2]) } : md ? { day: Number(md[2]), month: MONTHS.indexOf(md[1]) } : null;
-  // UK numeric "12/10"
+  // Day-first numeric date, as written in India: "12/10" = 12 October
   const slash = !dayMonth ? text.match(/\b(\d{1,2})\/(\d{1,2})\b/) : null;
   const dmResolved = dayMonth ?? (slash ? { day: Number(slash[1]), month: Number(slash[2]) - 1 } : null);
   if (dmResolved && dmResolved.month >= 0 && dmResolved.month < 12) {
@@ -150,7 +150,11 @@ export function parseTime(message: string): Pick<ParsedRequest, "timeFromMinutes
 
 export function parseBudget(message: string): Pick<ParsedRequest, "maxPrice" | "maxDuration"> {
   const text = norm(message);
-  const price = text.match(/(?:under|below|less than|max(?:imum)?|up to|cheaper than|within)\s*[£$€]?\s*(\d{1,5})(?!\d)(?!\s*(?:min|minute|hour|h\b))/);
+  // "under ₹1,500", "below rs. 900", "less than 2000 rupees", "up to inr 1,50,000"
+  const priceMatch = text.match(
+    /(?:under|below|less than|max(?:imum)?|up to|cheaper than|within|budget(?: of)?)\s*(?:[£$€₹]|rs\.?|inr)?\s*(\d{1,3}(?:,\d{2,3})+|\d{1,7})(?!\d)(?!\s*(?:min|minute|hour|h\b))/,
+  );
+  const price = priceMatch ? [priceMatch[0], priceMatch[1].replace(/,/g, "")] : null;
   const duration = text.match(/(?:under|below|less than|max(?:imum)?|up to|within|no more than)\s*(\d{1,3})\s*(?:min|minutes|mins)\b/);
   const hours = text.match(/(?:under|below|less than|up to|within)\s*(\d)\s*(?:hour|hours|h)\b/);
   return {
@@ -219,7 +223,7 @@ export function classifyIntent(message: string): Intent {
 
   if (
     !isQuestionAboutRules &&
-    /\b(recommend|suggest|which service|what services|services do you|do you offer|options|looking for|something (for|to)|help (with|me with)|under [£$€]?\d|less than \d+ ?min|cheapest|shortest)\b/.test(text)
+    /\b(recommend|suggest|which service|what services|services do you|do you offer|options|looking for|something (for|to)|help (with|me with)|under (?:[£$€₹]|rs\.? ?|inr ?)?\d|less than \d+ ?min|cheapest|shortest)\b/.test(text)
   ) {
     return "service_search";
   }

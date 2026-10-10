@@ -23,6 +23,7 @@ describe("classifyIntent", () => {
     ["Book me a meditation on Monday at 10am", "book"],
     ["I'd like to book career coaching", "book"],
     ["Show my upcoming bookings", "my_bookings"],
+    ["Recommend something for stress under ₹1,000", "service_search"],
     ["Recommend something for stress under £60", "service_search"],
     ["hello", "greeting"],
     // Regressions from real usage
@@ -46,7 +47,7 @@ describe("classifyIntent", () => {
     ["Book a massage on Monday morning", "book"],
     ["Cancel my physio check-in", "cancel"],
     ["Recommend something for back pain", "service_search"],
-    ["Which services are under £50?", "service_search"],
+    ["Which services are under ₹1,500?", "service_search"],
     ["Can I have my session by video call?", "policy_question"],
   ])("%s → %s", (message, intent) => {
     expect(classifyIntent(message)).toBe(intent);
@@ -103,6 +104,12 @@ describe("parseTime", () => {
 describe("parseBudget / parseReference", () => {
   it("extracts price and duration limits", () => {
     expect(parseBudget("something under £60")).toEqual({ maxPrice: 60 });
+    // Rupees: symbol, "Rs", "INR", "rupees" and Indian digit grouping
+    expect(parseBudget("something under ₹1,000")).toEqual({ maxPrice: 1000 });
+    expect(parseBudget("below rs. 900")).toEqual({ maxPrice: 900 });
+    expect(parseBudget("less than 2000 rupees")).toEqual({ maxPrice: 2000 });
+    expect(parseBudget("up to inr 1,50,000")).toEqual({ maxPrice: 150000 });
+    expect(parseBudget("budget of ₹2500 and less than 45 minutes")).toEqual({ maxPrice: 2500, maxDuration: 45 });
     expect(parseBudget("less than 45 minutes")).toEqual({ maxDuration: 45 });
   });
   it("extracts booking references", () => {

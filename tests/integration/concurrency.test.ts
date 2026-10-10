@@ -84,7 +84,7 @@ describe("concurrent booking of the same slot", () => {
     const t1 = db1.$transaction(
       async (tx) => {
         await tx.$executeRaw`INSERT INTO bookings (id, public_reference, slot_id, customer_id, status, price_cents, currency, updated_at)
-                             VALUES ('race-1', 'SLT-RACE01', ${slot.id}, ${a.id}, 'CONFIRMED', 100, 'GBP', now())`;
+                             VALUES ('race-1', 'SLT-RACE01', ${slot.id}, ${a.id}, 'CONFIRMED', 100, 'INR', now())`;
         t1Inserted();
         await t1Holding; // keep the transaction (and its uncommitted index entry) open
       },
@@ -95,7 +95,7 @@ describe("concurrent booking of the same slot", () => {
     const t2 = db2.$transaction(
       async (tx) =>
         tx.$executeRaw`INSERT INTO bookings (id, public_reference, slot_id, customer_id, status, price_cents, currency, updated_at)
-                       VALUES ('race-2', 'SLT-RACE02', ${slot.id}, ${b.id}, 'CONFIRMED', 100, 'GBP', now())`,
+                       VALUES ('race-2', 'SLT-RACE02', ${slot.id}, ${b.id}, 'CONFIRMED', 100, 'INR', now())`,
       { timeout: 30_000 },
     );
 

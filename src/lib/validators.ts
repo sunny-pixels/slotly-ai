@@ -54,7 +54,7 @@ const serviceFields = {
     .trim()
     .toUpperCase()
     .regex(/^[A-Z]{3}$/)
-    .default("GBP"),
+    .default("INR"),
   isActive: z.boolean().default(true),
 };
 

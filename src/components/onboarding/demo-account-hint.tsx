@@ -27,13 +27,13 @@ export function DemoAccountHint({ signedIn }: { signedIn: boolean }) {
       <p className="mt-1 leading-relaxed text-ink-muted">
         {signedIn ? (
           <>
-            Switch below at any time: <strong className="font-medium text-ink">Maya</strong> and <strong className="font-medium text-ink">Sam</strong> are customers,{" "}
-            <strong className="font-medium text-ink">Ava</strong> is the studio admin.
+            Switch below at any time: <strong className="font-medium text-ink">Ananya</strong> and <strong className="font-medium text-ink">Rohan</strong> are customers,{" "}
+            <strong className="font-medium text-ink">Priya</strong> is the studio admin.
           </>
         ) : (
           <>
-            No sign-up needed. <strong className="font-medium text-ink">Maya</strong> and <strong className="font-medium text-ink">Sam</strong> are customer accounts;{" "}
-            <strong className="font-medium text-ink">Ava</strong> is the admin account.
+            No sign-up needed. <strong className="font-medium text-ink">Ananya</strong> and <strong className="font-medium text-ink">Rohan</strong> are customer accounts;{" "}
+            <strong className="font-medium text-ink">Priya</strong> is the admin account.
           </>
         )}
       </p>

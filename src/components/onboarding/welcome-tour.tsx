@@ -102,7 +102,7 @@ const STEPS: Step[] = [
     label: "Studio admin",
     icon: ShieldCheck,
     eyebrow: "Step 5",
-    title: "See the studio side as Ava (admin)",
+    title: "See the studio side as Priya (admin)",
     body: "Switch to the admin account to explore the tools a studio manager would use.",
     points: [
       "Overview — live figures and today's agenda",

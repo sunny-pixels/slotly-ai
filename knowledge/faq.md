@@ -20,7 +20,7 @@ Bookings are personal to the account holder. The person attending should create 
 Customers must be 16 or older. Customers aged 16 or 17 need a parent or guardian present for massage and physio sessions.
 
 ## Which payment methods do you accept?
-Card and contactless payments at the studio. We do not accept cash or cheques.
+UPI, card and contactless payments at the studio. We do not accept cash or cheques.
 
 ## Do you offer online or video sessions?
 Strategy Consultation and Career Coaching can run by video call on request — mention it in the booking notes. Massage, meditation, nutrition and physio sessions take place in the studio.

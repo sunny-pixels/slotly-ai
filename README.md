@@ -185,8 +185,8 @@ All variables are server-side only. None are exposed to the browser.
 | `AUTH_SECRET` | ✓ | – | Signs session cookies (`npx auth secret`) |
 | `AUTH_TRUST_HOST` | | `true` | Trust the host header (needed behind proxies) |
 | `DEMO_ACCOUNTS_ENABLED` | | `true` | Enables the "Continue as…" switcher. **Set to `false` for real data.** |
-| `SEED_ADMIN_EMAIL` / `SEED_CUSTOMER_EMAIL` / `SEED_SECOND_CUSTOMER_EMAIL` | | `admin@`/`maya@`/`sam@slotly.dev` | Seeded demo identities |
-| `BUSINESS_TIMEZONE` | | `Europe/London` | Studio time zone for opening hours and display |
+| `SEED_ADMIN_EMAIL` / `SEED_CUSTOMER_EMAIL` / `SEED_SECOND_CUSTOMER_EMAIL` | | `admin@`/`ananya@`/`rohan@slotly.dev` | Seeded demo identities |
+| `BUSINESS_TIMEZONE` | | `Asia/Kolkata` | Studio time zone (IST) for opening hours and display |
 | `CANCELLATION_CUTOFF_HOURS` | | `24` | Customer self-cancellation window |
 | `BOOKING_MIN_LEAD_MINUTES` | | `60` | Online booking closes this long before the start |
 | `EMBEDDING_PROVIDER` | | `local` | `local` (free, in-process) or `gemini` |
@@ -243,13 +243,15 @@ pnpm db:migrate:dev    # create a new migration during development
 - 6 services with weekly opening hours;
 - **14 days of slots** generated in the business time zone from the same generator the admin UI uses;
 - demo bookings, each with a fixed reference:
-  - `SLT-DEMO01`, `SLT-DEMO02` — confirmed, Maya;
+  - `SLT-DEMO01`, `SLT-DEMO02` — confirmed, Ananya;
   - `SLT-DEMO03` — cancelled, so its slot is open again;
-  - `SLT-DEMO04` — Sam's booking, so Maya sees that time as booked;
+  - `SLT-DEMO04` — Rohan's booking, so Ananya sees that time as booked;
   - `SLT-DEMO05` — a completed past session;
 - the knowledge base (6 documents, including a superseded 2024 policy that is kept inactive).
 
 Re-run `pnpm db:seed` on later days to extend slots so 14 days stay published.
+
+To rebuild the demo activity from scratch, for example after changing `BUSINESS_TIMEZONE` (existing slots were generated for the old zone), run `pnpm db:reset-demo --yes` and then `pnpm db:seed`. This deletes bookings, slots, opening-hour rules and users, and keeps services and the knowledge base.
 
 ---
 
@@ -259,12 +261,12 @@ Authentication uses **Auth.js v5** with signed, HTTP-only JWT session cookies. A
 
 | Account | Role | What it shows |
 |---|---|---|
-| **Maya Chen** (`maya@slotly.dev`) | Customer | Upcoming, past and cancelled bookings |
-| **Sam Okafor** (`sam@slotly.dev`) | Customer | A second customer, for ownership checks |
-| **Ava Patel** (`admin@slotly.dev`) | Admin | Full studio admin |
+| **Ananya Sharma** (`ananya@slotly.dev`) | Customer | Upcoming, past and cancelled bookings |
+| **Rohan Mehta** (`rohan@slotly.dev`) | Customer | A second customer, for ownership checks |
+| **Priya Iyer** (`admin@slotly.dev`) | Admin | Full studio admin |
 
 How it stays safe:
-- The browser only sends an **account key** (`maya` / `sam` / `admin`) to a server action. The server maps the key to a seeded user, and there is no way to submit an arbitrary email, id or role.
+- The browser only sends an **account key** (`ananya` / `rohan` / `admin`) to a server action. The server maps the key to a seeded user, and there is no way to submit an arbitrary email, id or role.
 - The session identifies the user, and **every protected route handler re-reads the user and their role from the database** (`src/server/authz.ts`). A demoted administrator loses access on the next request. Hiding admin navigation is cosmetic only, because every `/api/admin/*` handler calls `requireAdmin()`.
 - Customers reach only their own bookings. Ownership is part of each query, and another customer's booking is reported as **404**, so its existence isn't revealed. Request bodies never carry a customer id.
 - There is no public registration, so nothing can grant itself administrator rights.

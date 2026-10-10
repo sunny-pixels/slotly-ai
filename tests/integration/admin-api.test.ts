@@ -12,7 +12,7 @@ import { getConfig } from "@/lib/config";
 import { addDaysToKey, todayKey } from "@/lib/time";
 import { actAs, createService, createSlot, createUser, jsonRequest, params, resetDatabase } from "../support/fixtures";
 
-const newService = { name: "Sports Massage", description: "A firm sports massage for testing.", category: "Wellness", durationMinutes: 45, priceCents: 5500, currency: "GBP" };
+const newService = { name: "Sports Massage", description: "A firm sports massage for testing.", category: "Wellness", durationMinutes: 45, priceCents: 5500, currency: "INR" };
 
 describe("admin-only management", () => {
   beforeEach(async () => {

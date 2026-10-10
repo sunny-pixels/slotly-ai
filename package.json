@@ -14,6 +14,7 @@
     "db:seed": "prisma db seed",
     "db:verify": "tsx scripts/verify-db.ts",
     "db:setup": "prisma migrate deploy && prisma db seed && tsx scripts/verify-db.ts",
+    "db:reset-demo": "tsx scripts/reset-demo.ts",
     "kb:ingest": "tsx scripts/ingest-knowledge.ts",
     "eval:rag": "tsx scripts/eval-rag.ts",
     "test": "vitest run",

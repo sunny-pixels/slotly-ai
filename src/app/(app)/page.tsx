@@ -108,10 +108,10 @@ export default async function ServicesPage({ searchParams }: { searchParams: Sea
             </label>
             <NativeSelect id="maxPrice" name="maxPrice" defaultValue={filters.maxPrice?.toString() ?? ""}>
               <option value="">Any price</option>
-              <option value="30">Up to £30</option>
-              <option value="50">Up to £50</option>
-              <option value="70">Up to £70</option>
-              <option value="100">Up to £100</option>
+              <option value="500">Up to ₹500</option>
+              <option value="1000">Up to ₹1,000</option>
+              <option value="2000">Up to ₹2,000</option>
+              <option value="3000">Up to ₹3,000</option>
             </NativeSelect>
           </div>
           <div>

@@ -12,7 +12,7 @@ const floatFromEnv = (fallback: number) =>
   z.preprocess((v) => (v === undefined || v === "" ? fallback : Number(v)), z.number());
 
 const ConfigSchema = z.object({
-  BUSINESS_TIMEZONE: z.string().default("Europe/London"),
+  BUSINESS_TIMEZONE: z.string().default("Asia/Kolkata"),
   CANCELLATION_CUTOFF_HOURS: intFromEnv(24).pipe(z.number().min(0).max(720)),
   BOOKING_MIN_LEAD_MINUTES: intFromEnv(60).pipe(z.number().min(0).max(10080)),
 

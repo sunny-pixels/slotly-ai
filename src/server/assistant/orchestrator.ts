@@ -4,7 +4,7 @@ import type { Actor } from "../authz";
 import { prisma } from "../db";
 import { getConfig } from "@/lib/config";
 import { addDaysToKey, formatInZone, isDateKey, todayKey as getTodayKey } from "@/lib/time";
-import { formatDuration, formatPrice } from "@/lib/money";
+import { DEFAULT_CURRENCY, formatDuration, formatPrice } from "@/lib/money";
 import type { AssistantReply } from "@/lib/assistant-types";
 import { getLlm, parseJsonObject } from "../rag/llm";
 import { INTENT_SYSTEM_PROMPT } from "../rag/prompts";
@@ -16,7 +16,7 @@ type History = { role: "user" | "assistant"; content: string }[];
 const DEFAULT_SUGGESTIONS = [
   "What is your cancellation policy?",
   "Any massage slots tomorrow afternoon?",
-  "Recommend something for stress under £60",
+  "Recommend something for stress under ₹1,000",
   "Show my upcoming bookings",
 ];
 
@@ -78,7 +78,7 @@ async function dispatch(
       const query = wantsFullList ? undefined : req.maxPrice || req.maxDuration ? stripBudget(message) : message;
       const res = await tools.search_services({ query, maxPrice: req.maxPrice, maxDuration: req.maxDuration });
       const criteria = [
-        req.maxPrice !== undefined ? `under ${formatPrice(req.maxPrice * 100, "GBP")}` : null,
+        req.maxPrice !== undefined ? `up to ${formatPrice(req.maxPrice * 100, DEFAULT_CURRENCY)}` : null,
         req.maxDuration !== undefined ? `up to ${formatDuration(req.maxDuration)}` : null,
       ].filter(Boolean);
       if (res.services.length === 0) {
@@ -255,7 +255,9 @@ function minutesOf(iso: string, tz: string) {
 }
 
 function stripBudget(message: string) {
-  return message.replace(/(under|below|less than|max(imum)?|up to|within|cheaper than)\s*[£$€]?\s*\d+\s*(min(ute)?s?|hours?)?/gi, "").trim();
+  return message
+    .replace(/(under|below|less than|max(imum)?|up to|within|cheaper than|budget( of)?)\s*([£$€₹]|rs\.?|inr)?\s*[\d,]+\s*(min(ute)?s?|hours?|rupees?|rs\.?|inr)?/gi, "")
+    .trim();
 }
 
 /** Follow-ups such as "what about Friday?" inherit the service and intent of the previous turn. */

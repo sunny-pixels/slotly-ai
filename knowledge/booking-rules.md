@@ -19,7 +19,7 @@ Our calendar is published up to 14 days ahead. Online booking for a time closes 
 You need a free Slotly account to book, so that only you can view or cancel your bookings. Staff can see the bookings they manage, but other customers never see your details.
 
 ## Payment
-Payment is taken at the studio after your appointment, by card or contactless. We do not take deposits for online bookings. The price you pay is the price shown when you booked, even if the listed price changes later.
+Payment is taken at the studio after your appointment, by UPI, card or contactless. We do not take deposits for online bookings. The price you pay is the price shown when you booked, even if the listed price changes later.
 
 ## Arriving for your appointment
 Please arrive 5–10 minutes early. If you arrive late, your session still ends at the scheduled time so the next customer is not delayed.

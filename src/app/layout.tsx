@@ -17,7 +17,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-GB" className={`${inter.variable} ${manrope.variable} antialiased`}>
+    <html lang="en-IN" className={`${inter.variable} ${manrope.variable} antialiased`}>
       <body className="min-h-dvh">
         {children}
         <Toaster

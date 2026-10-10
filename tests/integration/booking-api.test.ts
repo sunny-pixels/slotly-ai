@@ -46,7 +46,7 @@ describe("booking API", () => {
     const taken = await createSlot(svc.id, 52);
     const blocked = await createSlot(svc.id, 54, { status: "BLOCKED" });
     const someone = await createUser();
-    await prisma.booking.create({ data: { publicReference: "SLT-TAKEN1", slotId: taken.id, customerId: someone.id, priceCents: 1, currency: "GBP" } });
+    await prisma.booking.create({ data: { publicReference: "SLT-TAKEN1", slotId: taken.id, customerId: someone.id, priceCents: 1, currency: "INR" } });
 
     const date = toDateKey(open.startAt, tz);
     const res = await availabilityRoute(jsonRequest(`/api/availability?serviceId=${svc.id}&date=${date}`, "GET"), undefined);
@@ -73,7 +73,7 @@ describe("booking API", () => {
     const res = await book(slot.id);
     expect(res.status).toBe(201);
     const { booking } = await res.json();
-    expect(booking).toMatchObject({ status: "CONFIRMED", priceCents: 6500, currency: "GBP" });
+    expect(booking).toMatchObject({ status: "CONFIRMED", priceCents: 6500, currency: "INR" });
     expect(booking.publicReference).toMatch(/^SLT-[A-Z0-9]{6}$/);
 
     const row = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });

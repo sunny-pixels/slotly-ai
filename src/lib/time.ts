@@ -70,8 +70,16 @@ export function formatDateTime(date: Date | string, timeZone: string): string {
   return formatInZone(date, "EEE d MMM yyyy, HH:mm", timeZone);
 }
 
-/** Short zone label such as "GMT+1" for display next to times. */
+/** Short zone label for display next to times, e.g. "IST" for Asia/Kolkata. */
 export function zoneLabel(date: Date | string, timeZone: string): string {
+  try {
+    const part = new Intl.DateTimeFormat("en-IN", { timeZone, timeZoneName: "short" })
+      .formatToParts(new Date(date))
+      .find((p) => p.type === "timeZoneName");
+    if (part?.value) return part.value;
+  } catch {
+    // Unknown zone or Intl data unavailable — fall back to a GMT offset.
+  }
   return formatInZone(date, "zzz", timeZone);
 }
 

@@ -33,7 +33,7 @@ export async function createService(overrides: Partial<{ name: string; slug: str
       category: overrides.category ?? "Wellness",
       durationMinutes: overrides.durationMinutes ?? 60,
       priceCents: overrides.priceCents ?? 6500,
-      currency: "GBP",
+      currency: "INR",
       isActive: overrides.isActive ?? true,
     },
   });

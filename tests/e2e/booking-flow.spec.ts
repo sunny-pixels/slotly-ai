@@ -12,9 +12,9 @@ test("customer books an open slot, sees it in My bookings, then cancels it", asy
   // 1. Pick the demo customer from the sidebar switcher.
   await page.goto("/");
   await page.getByRole("button", { name: "Continue as…" }).click();
-  await page.getByRole("button", { name: /Maya Chen/ }).click();
+  await page.getByRole("button", { name: /Ananya Sharma/ }).click();
   // Wait for the server action to finish and the shell to show the signed-in user.
-  await expect(page.getByText("maya@slotly.dev")).toBeVisible();
+  await expect(page.getByText("ananya@slotly.dev")).toBeVisible();
 
   // 2. Open a service and choose the first open time.
   await page.goto("/services/guided-meditation/book");
@@ -47,8 +47,8 @@ test("customer books an open slot, sees it in My bookings, then cancels it", asy
 test("customers cannot open the admin area", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Continue as…" }).click();
-  await page.getByRole("button", { name: /Sam Okafor/ }).click();
-  await expect(page.getByText("sam@slotly.dev")).toBeVisible();
+  await page.getByRole("button", { name: /Rohan Mehta/ }).click();
+  await expect(page.getByText("rohan@slotly.dev")).toBeVisible();
   await page.goto("/admin");
   await expect(page.getByText("Administrator access required")).toBeVisible();
 });

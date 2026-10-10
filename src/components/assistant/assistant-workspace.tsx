@@ -24,7 +24,7 @@ type Message =
 const SUGGESTIONS = [
   "What is your cancellation policy?",
   "Any massage slots tomorrow afternoon?",
-  "Recommend something for stress under £60",
+  "Recommend something for stress under ₹1,000",
   "What are your opening hours on Saturday?",
   "Show my upcoming bookings",
   "Do you offer gift vouchers?",
@@ -40,7 +40,7 @@ const GUIDE: { title: string; icon: React.ComponentType<{ className?: string }>;
   {
     title: "Find a service",
     icon: Search,
-    questions: ["Which services do you offer?", "Recommend something for stress under £60", "Recommend something for back pain"],
+    questions: ["Which services do you offer?", "Recommend something for stress under ₹1,000", "Recommend something for back pain"],
   },
   {
     title: "Open times",
@@ -81,7 +81,7 @@ function relatedQuestions(reply: AssistantReply, signedIn: boolean, timeZone: st
       const names = (reply.services ?? []).slice(0, 2).map((s) => s.name);
       return {
         title,
-        questions: [...names.map((n) => `Next available ${n}`), "Which services are under £50?", "What should I expect on my first visit?"],
+        questions: [...names.map((n) => `Next available ${n}`), "Which services are under ₹1,500?", "What should I expect on my first visit?"],
       };
     }
     case "my_bookings":

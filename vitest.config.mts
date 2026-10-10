@@ -18,7 +18,7 @@ export default defineConfig({
           name: "unit",
           include: ["tests/unit/**/*.test.ts"],
           environment: "node",
-          env: { EMBEDDING_PROVIDER: "fake", LLM_PROVIDER: "none", BUSINESS_TIMEZONE: "Europe/London" },
+          env: { EMBEDDING_PROVIDER: "fake", LLM_PROVIDER: "none", BUSINESS_TIMEZONE: "Asia/Kolkata" },
         },
       },
       {
@@ -36,7 +36,7 @@ export default defineConfig({
           env: {
             // The app's Prisma client reads DATABASE_URL — point it at the dedicated test database.
             DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
-            BUSINESS_TIMEZONE: "Europe/London",
+            BUSINESS_TIMEZONE: "Asia/Kolkata",
             CANCELLATION_CUTOFF_HOURS: "24",
             BOOKING_MIN_LEAD_MINUTES: "60",
             EMBEDDING_PROVIDER: "local",

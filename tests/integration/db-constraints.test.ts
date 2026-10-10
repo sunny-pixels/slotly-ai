@@ -16,10 +16,10 @@ describe("database-level integrity", () => {
     const svc = await createService();
     const slot = await createSlot(svc.id, 48);
     await prisma.$executeRaw`INSERT INTO bookings (id, public_reference, slot_id, customer_id, status, price_cents, currency, updated_at)
-                             VALUES ('raw-1', 'SLT-RAW001', ${slot.id}, ${a.id}, 'CONFIRMED', 100, 'GBP', now())`;
+                             VALUES ('raw-1', 'SLT-RAW001', ${slot.id}, ${a.id}, 'CONFIRMED', 100, 'INR', now())`;
     await expect(
       prisma.$executeRaw`INSERT INTO bookings (id, public_reference, slot_id, customer_id, status, price_cents, currency, updated_at)
-                         VALUES ('raw-2', 'SLT-RAW002', ${slot.id}, ${b.id}, 'PENDING', 100, 'GBP', now())`,
+                         VALUES ('raw-2', 'SLT-RAW002', ${slot.id}, ${b.id}, 'PENDING', 100, 'INR', now())`,
     ).rejects.toThrow(/unique_active_booking_per_slot|23505|Unique constraint/i);
   });
 
@@ -29,11 +29,11 @@ describe("database-level integrity", () => {
     const slot = await createSlot(svc.id, 48);
     for (let i = 0; i < 3; i++) {
       await prisma.booking.create({
-        data: { publicReference: `SLT-CXL00${i}`, slotId: slot.id, customerId: user.id, status: "CANCELLED", cancelledAt: new Date(), priceCents: 1, currency: "GBP" },
+        data: { publicReference: `SLT-CXL00${i}`, slotId: slot.id, customerId: user.id, status: "CANCELLED", cancelledAt: new Date(), priceCents: 1, currency: "INR" },
       });
     }
     await expect(
-      prisma.booking.create({ data: { publicReference: "SLT-ACTIVE", slotId: slot.id, customerId: user.id, status: "CONFIRMED", priceCents: 1, currency: "GBP" } }),
+      prisma.booking.create({ data: { publicReference: "SLT-ACTIVE", slotId: slot.id, customerId: user.id, status: "CONFIRMED", priceCents: 1, currency: "INR" } }),
     ).resolves.toBeTruthy();
   });
 
@@ -60,7 +60,7 @@ describe("database-level integrity", () => {
     const svc = await createService();
     const slot = await createSlot(svc.id, 48);
     await expect(
-      prisma.booking.create({ data: { publicReference: "SLT-NOTIME", slotId: slot.id, customerId: user.id, status: "CANCELLED", priceCents: 1, currency: "GBP" } }),
+      prisma.booking.create({ data: { publicReference: "SLT-NOTIME", slotId: slot.id, customerId: user.id, status: "CANCELLED", priceCents: 1, currency: "INR" } }),
     ).rejects.toThrow();
   });
 });

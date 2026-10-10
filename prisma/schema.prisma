@@ -71,7 +71,7 @@ model Service {
   category          String
   durationMinutes   Int                @map("duration_minutes")
   priceCents        Int                @map("price_cents")
-  currency          String             @default("GBP") @db.Char(3)
+  currency          String             @default("INR") @db.Char(3)
   isActive          Boolean            @default(true) @map("is_active")
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)

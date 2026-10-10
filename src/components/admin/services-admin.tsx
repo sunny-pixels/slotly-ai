@@ -150,7 +150,7 @@ function ServiceForm({ service, onDone }: { service: AdminService | null; onDone
       description: String(fd.get("description") ?? ""),
       durationMinutes: Number(fd.get("durationMinutes")),
       priceCents: Math.round(Number(fd.get("price")) * 100),
-      currency: String(fd.get("currency") ?? "GBP"),
+      currency: String(fd.get("currency") ?? "INR"),
       ...(service ? {} : { isActive: true }),
     };
     setSaving(true);
@@ -213,12 +213,12 @@ function ServiceForm({ service, onDone }: { service: AdminService | null; onDone
             <Field id="svc-duration" label="Duration (minutes)" error={fieldErrors.durationMinutes}>
               <Input name="durationMinutes" type="number" min={5} max={480} step={5} defaultValue={service?.durationMinutes ?? 60} required />
             </Field>
-            <Field id="svc-price" label="Price" error={fieldErrors.priceCents}>
-              <Input name="price" type="number" min={0} step="0.01" defaultValue={service ? (service.priceCents / 100).toFixed(2) : "50.00"} required />
+            <Field id="svc-price" label="Price (₹)" error={fieldErrors.priceCents}>
+              <Input name="price" type="number" min={0} step="0.01" defaultValue={service ? String(service.priceCents / 100) : "1000"} required />
             </Field>
           </div>
-          <Field id="svc-currency" label="Currency" hint="ISO code, e.g. GBP" error={fieldErrors.currency}>
-            <Input name="currency" defaultValue={service?.currency ?? "GBP"} maxLength={3} required className="w-28 uppercase" />
+          <Field id="svc-currency" label="Currency" hint="ISO code, e.g. INR" error={fieldErrors.currency}>
+            <Input name="currency" defaultValue={service?.currency ?? "INR"} maxLength={3} required className="w-28 uppercase" />
           </Field>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
